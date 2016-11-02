@@ -3,7 +3,7 @@ import os
 import sqlite3 as sql
 import numpy as np
 
-base_dir = "../../data/"
+base_dir = "../../../MillionSongSubset/data/"
 db_file = "../resources/songs.db"
 
 properties = [method.replace("get_", "") for method in dir(h5) if method.startswith("get") and not method.startswith("get_num")]
@@ -11,7 +11,11 @@ song_properties = [prop for prop in properties if not prop.startswith("artist") 
 artist_properties = [prop for prop in properties if prop.startswith("artist")]
 
 def serialize(data):
-    pass
+    print np.array_str(data)
+    return np.array_str(data)
+
+def deserialize(data):
+    return np.fromstring(data)
 
 def get_property(property, data, song_index):
     return getattr(h5, "get_" + property)(data, song_index)
@@ -25,13 +29,18 @@ def add_data_to_songs_table(con, data, song_index, artist_id):
             song_data = serialize(song_data)
         values.append(song_data)
 
-    command = "INSERT INTO Songs (artist_id, "
+    command = "INSERT INTO Songs (artist_id "
     for property in song_properties:
-        command += property + ", "
+        command += ", " + property
 
-    command += ") VALUES (" + str(artist_id) + ", "
+    #dodac ''
+    command += ") VALUES (" + str(artist_id)
+
     for value in values:
-        command += str(value) + ", "
+        if type(value) == np.string_:
+            command += ", '" + str(value) + "'"
+        else:
+            command += ", " + str(value)
     command += ");"
 
     cursor = con.cursor()
@@ -52,25 +61,45 @@ def add_data_to_artist_table(con, data, song_index):
         command += property + ", "
 
     command += ") VALUES ("
+    is_first = True
     for value in values:
-        command += str(value) + ", "
-    command += ");"
+        if not is_first:
+            command += ", "
+        else:
+            is_first = False
 
+        if type(value) == np.string_:
+            command += "'" + str(value) + "'"
+        else:
+            command += str(value)
+    command += ");"
+    print command
     cursor = con.cursor()
     cursor.execute(command)
     con.commit()
 
     #jakims cudem wytrzasnac teraz artist_id ktore sie stworzylo
-    artist_id = []
+    artist_id = get_artist_id(con, h5.get_artist_mbid(data, song_index))
     return artist_id
+
+def get_artist_id(con, artist_mbid):
+    query = "SELECT a_id FROM Artists where artist_mbid='" + str(artist_mbid) + "'"
+    a_id = con.execute(query)
+    for id in a_id:
+        return id[0]
+    return -1
 
 def add_to_database(con, full_path):
     data = h5.open_h5_file_read(full_path)
     number_of_songs = h5.get_num_songs(data)
     for song_index in xrange(0, number_of_songs):
         #tutaj jakos sprawdzac czy dany artysta czasem nie istnieje i jego artist_id jakos wyciagac i podawac do piosenki
-        artist_id = add_data_to_artist_table(con, data)
-        add_data_to_songs_table(con, data, artist_id)
+        artist_id = get_artist_id(con, h5.get_artist_mbid(data, song_index))
+        print artist_id
+        if(artist_id == -1):
+            artist_id = add_data_to_artist_table(con, data, song_index)
+
+        add_data_to_songs_table(con, data, artist_id, song_index)
         #tutaj na koncu zrobic jakos Artists_Rel
     data.close()
 

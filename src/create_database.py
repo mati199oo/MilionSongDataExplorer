@@ -2,7 +2,7 @@ import hdf5_getters as h5
 import sqlite3 as sql
 import numpy as np
 
-example_song = "../resources/TRALLQX12903CD838C.h5"
+example_song = "../resources/TRAAFMS128F933AB23.h5"
 db_file = "../resources/songs.db"
 
 properties = [method.replace("get_", "") for method in dir(h5) if method.startswith("get") and not method.startswith("get_num")]
