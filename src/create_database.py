@@ -20,14 +20,14 @@ def create_rel_table(con, command):
 def create_table(data, con, command, properties):
     for property in properties:
         property_type = type(get_property(property, data))
-        if property_type == np.string_ and property_type == np.ndarray:
+        if property_type == np.string_ or property_type == np.ndarray:
             command += ", " + property + " TEXT"
         elif property_type == np.int32:
             command += ", " + property + " INT"
         elif property_type == np.float64:
             command += ", " + property + " REAL"
 
-    command += ")"
+    command += ");"
     cursor = con.cursor()
     cursor.execute(command)
     con.commit()
@@ -35,7 +35,7 @@ def create_table(data, con, command, properties):
 def create_db():
     songs_command = "CREATE TABLE IF NOT EXISTS Songs(s_id INT PRIMARY KEY NOT NULL, artist_id INT"
     artists_command = "CREATE TABLE IF NOT EXISTS Artists(a_id INT PRIMARY KEY NOT NULL"
-    artists_rel_command = "CREATE TABLE IF NOT EXISTS ArtistsRel(artist1_id INT PRIMARY KEY NOT NULL, artist2_id INT NOT NULL)"
+    artists_rel_command = "CREATE TABLE IF NOT EXISTS ArtistsRel(artist1_id INT PRIMARY KEY NOT NULL, artist2_id INT NOT NULL);"
     con = sql.connect(db_file)
     data = h5.open_h5_file_read(example_song)
     create_table(data, con, songs_command, song_properties)
