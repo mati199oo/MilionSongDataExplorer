@@ -2,6 +2,7 @@ import hdf5_getters as h5
 import os
 import sqlite3 as sql
 import numpy as np
+import pickle as pic
 
 base_dir = "../../../MillionSongSubset/data/"
 db_file = "../resources/songs.db"
@@ -11,11 +12,7 @@ song_properties = [prop for prop in properties if not prop.startswith("artist") 
 artist_properties = [prop for prop in properties if prop.startswith("artist")]
 
 def serialize(data):
-    print np.array_str(data)
-    return np.array_str(data)
-
-def deserialize(data):
-    return np.fromstring(data)
+    return pic.dumps(data)
 
 def get_property(property, data, song_index):
     return getattr(h5, "get_" + property)(data, song_index)
@@ -33,21 +30,34 @@ def add_data_to_songs_table(con, data, song_index, artist_id):
     for property in song_properties:
         command += ", " + property
 
-    #dodac ''
     command += ") VALUES (" + str(artist_id)
 
+    is_first = True
     for value in values:
+        if not is_first:
+            command += ", "
+        else:
+            is_first = False
+
         if type(value) == np.string_:
             command += ", '" + str(value) + "'"
         else:
-            command += ", " + str(value)
+            command += str(value)
     command += ");"
 
     cursor = con.cursor()
     cursor.execute(command)
     con.commit()
 
-def add_data_to_artist_table(con, data, song_index):
+def add_data_to_artists_rel_table(con, data, song_index, artist_id):
+    command = "INSERT INTO ArtistsRel (artist1_id, artist2_id) VALUES (" + str(artist_id) + ", "
+    similar_artists = h5.get_similar_artists(data, song_index)
+    for similar_artist_id in similar_artists:
+        cursor = con.cursor()
+        cursor.execute(command + "'" + str(similar_artist_id) + "');")
+        con.commit()
+
+def add_data_to_artists_table(con, data, song_index):
     values = []
 
     for property in artist_properties:
@@ -61,6 +71,7 @@ def add_data_to_artist_table(con, data, song_index):
         command += property + ", "
 
     command += ") VALUES ("
+
     is_first = True
     for value in values:
         if not is_first:
@@ -73,17 +84,16 @@ def add_data_to_artist_table(con, data, song_index):
         else:
             command += str(value)
     command += ");"
-    print command
+
     cursor = con.cursor()
     cursor.execute(command)
     con.commit()
 
-    #jakims cudem wytrzasnac teraz artist_id ktore sie stworzylo
     artist_id = get_artist_id(con, h5.get_artist_mbid(data, song_index))
     return artist_id
 
 def get_artist_id(con, artist_mbid):
-    query = "SELECT a_id FROM Artists where artist_mbid='" + str(artist_mbid) + "'"
+    query = "SELECT a_id FROM Artists WHERE artist_mbid = '" + str(artist_mbid) + "'"
     a_id = con.execute(query)
     for id in a_id:
         return id[0]
@@ -93,14 +103,11 @@ def add_to_database(con, full_path):
     data = h5.open_h5_file_read(full_path)
     number_of_songs = h5.get_num_songs(data)
     for song_index in xrange(0, number_of_songs):
-        #tutaj jakos sprawdzac czy dany artysta czasem nie istnieje i jego artist_id jakos wyciagac i podawac do piosenki
         artist_id = get_artist_id(con, h5.get_artist_mbid(data, song_index))
-        print artist_id
-        if(artist_id == -1):
-            artist_id = add_data_to_artist_table(con, data, song_index)
-
+        if artist_id == -1:
+            artist_id = add_data_to_artists_table(con, data, song_index)
+            add_data_to_artists_rel_table(con, data, song_index, artist_id)
         add_data_to_songs_table(con, data, artist_id, song_index)
-        #tutaj na koncu zrobic jakos Artists_Rel
     data.close()
 
 def add_all():
