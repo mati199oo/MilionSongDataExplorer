@@ -35,9 +35,9 @@ def create_table(data, con, command, properties):
     con.commit()
 
 def create_db():
-    songs_command = "CREATE TABLE IF NOT EXISTS Songs(s_id INT PRIMARY KEY NOT NULL, artist_id INT"
-    artists_command = "CREATE TABLE IF NOT EXISTS Artists(a_id INT PRIMARY KEY NOT NULL"
-    artists_rel_command = "CREATE TABLE IF NOT EXISTS ArtistsRel(artist1_id INT PRIMARY KEY NOT NULL, artist2_id TEXT NOT NULL);"
+    songs_command = "CREATE TABLE IF NOT EXISTS Songs(s_id INTEGER PRIMARY KEY, artist_id INT"
+    artists_command = "CREATE TABLE IF NOT EXISTS Artists(a_id INTEGER PRIMARY KEY"
+    artists_rel_command = "CREATE TABLE IF NOT EXISTS ArtistsRel(id INTEGER PRIMARY KEY, artist1_id TEXT NOT NULL, artist2_id TEXT NOT NULL);"
     con = sql.connect(db_file)
     data = h5.open_h5_file_read(example_song)
     create_table(data, con, songs_command, song_properties)
