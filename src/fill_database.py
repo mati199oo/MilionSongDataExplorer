@@ -3,7 +3,6 @@ import os
 import sqlite3 as sql
 import numpy as np
 import pickle as pic
-import io
 
 base_dir = "../../../MillionSongSubset/data/"
 db_file = "../resources/songs.db"
@@ -12,15 +11,13 @@ properties = [method.replace("get_", "") for method in dir(h5) if method.startsw
 song_properties = [prop for prop in properties if not prop.startswith("artist") and not prop.startswith("similar_artists")]
 artist_properties = [prop for prop in properties if prop.startswith("artist")]
 
-serial = 0
-
 def serialize(data):
     return sql.Binary(pic.dumps(data, pic.HIGHEST_PROTOCOL))
 
 def get_property(property, data, song_index):
     return getattr(h5, "get_" + property)(data, song_index)
 
-def add_data_to_songs_table(con, data, song_index, artist_id):
+def add_data_to_songs_table(con, data, artist_id):
     values = [int(artist_id)]
     for property in song_properties:
         song_data = get_property(property, data, 0)
@@ -103,7 +100,7 @@ def add_data_to_artists_table(con, data, song_index):
     return artist_id
 
 def get_artist_id(con, artist_mbid):
-    query = "SELECT a_id FROM Artists WHERE artist_mbid like '" + str(artist_mbid) + "'"
+    query = "SELECT a_id FROM Artists WHERE artist_mbid like '" + str(artist_mbid) + "';"
     a_id = con.execute(query)
     for id in a_id:
         return id[0]
@@ -117,20 +114,17 @@ def add_to_database(con, full_path):
         if artist_id == -1:
             artist_id = add_data_to_artists_table(con, data, song_index)
             add_data_to_artists_rel_table(con, data, song_index, artist_id)
-        add_data_to_songs_table(con, data, song_index, artist_id)
+        add_data_to_songs_table(con, data, artist_id)
     data.close()
 
 def add_all():
     con = sql.connect(db_file)
     con.text_factory = str
-    i = 0
     for directory1 in os.listdir(base_dir):
         for directory2 in os.listdir(os.path.join(base_dir, directory1)):
             for directory3 in os.listdir(os.path.join(base_dir, directory1, directory2)):
                 for file in os.listdir(os.path.join(base_dir, directory1, directory2, directory3)):
                     full_path = os.path.join(base_dir, directory1, directory2, directory3, file)
-                    i += 1
-                    print i
                     add_to_database(con, full_path)
 
 def main():
