@@ -1,6 +1,56 @@
 import sqlite3 as sql
+from difflib import SequenceMatcher
 
 db_file = "../resources/songs.db"
+
+def similar(a, b):
+    return SequenceMatcher(None, a, b).ratio()
+
+def print_most_similar_songs(similar_songs, number_of_songs):
+    similar_songs = sorted(similar_songs, key=lambda song: song[1])
+    for i in xrange(0, number_of_songs):
+        print str(similar_songs[i][0]) + ' : ' + str(similar_songs[i][1])
+
+def calculate_similarity(typed_song, other_song, similar_artists):
+    similarity_value = 0
+    similarity_value += abs(typed_song[1] - other_song[1]) * 0.55
+    if typed_song[3] is not None and other_song[3] is not None:
+        similarity_value += abs(typed_song[3] - other_song[3]) * 0.08
+    if typed_song[4] is not None and other_song[4] is not None:
+        similarity_value += abs(typed_song[4] - other_song[4]) * 0.77
+    similarity_value += abs(typed_song[5] - other_song[5]) * 0.04
+    similarity_value += abs(typed_song[6] - other_song[6]) * 0.38
+    similarity_value += abs(typed_song[7] - other_song[7]) * 0.01
+    similarity_value += abs(typed_song[8] - other_song[8]) * 0.03
+    similarity_value += abs(typed_song[9] - other_song[9]) * 0.5
+    similarity_value += abs(typed_song[10] - other_song[10]) * 0.1
+    similarity_value += abs(typed_song[11] - other_song[11]) * 0.2
+    similarity_value += abs(typed_song[12] - other_song[12]) * 0.6
+    similarity_value += abs(typed_song[13] - other_song[13]) * 0.3
+    if typed_song[15] is not None and other_song[15] is not None:
+        similarity_value += abs(typed_song[15] - other_song[15]) * 0.9
+    if typed_song[16] is not None and other_song[16] is not None:
+        similarity_value += abs(typed_song[16] - other_song[16]) * 0.96
+    if typed_song[17] is not None and other_song[17] is not None:
+        similarity_value += abs(typed_song[17] - other_song[17]) * 0.5
+    if typed_song[19] is not None and other_song[19] is not None:
+        similarity_value += abs(typed_song[19] - other_song[19]) * 0.3
+    similarity_value += similar(typed_song[0], other_song[0]) * 0.02
+    similarity_value += similar(typed_song[18], other_song[18]) * 0.01
+    if typed_song[2] == other_song[2]:
+        similarity_value *= 0.03
+    if typed_song[14] == other_song[14]:
+        similarity_value *= 0.04
+    if other_song[20] in similar_artists:
+        similarity_value *= 0.21
+    return similarity_value
+
+def create_similar_songs_list(typed_song, songs, similar_artists):
+    similar_songs = []
+    for song in songs:
+        similarity_value = calculate_similarity(typed_song, song, similar_artists)
+        similar_songs.append((song[0], similarity_value))
+    return similar_songs
 
 def get_similar_artists(con, artist_name):
     query = "SELECT ar.artist2_id FROM ArtistsRel AS ar WHERE ar.artist1_id = '" + str(artist_name) + "';"
@@ -14,12 +64,9 @@ def get_all_other_songs_data(con, song_name):
     query = "SELECT s.title, s.year, s.release, s.song_hotttnesss, s.danceability, s.duration, " \
             "s.loudness, s.end_of_fade_in, s.start_of_fade_out, s.key, s.energy, s.mode, s.tempo, " \
             "s.time_signature, a.artist_name, a.artist_familiarity, a.artist_hotttnesss, a.artist_latitude, " \
-            "a.artist_location, a.artist_longitude, a.artist_id, a.a_id FROM Songs AS s inner join Artists AS a ON " \
+            "a.artist_location, a.artist_longitude, a.artist_id FROM Songs AS s inner join Artists AS a ON " \
             "s.artist_id = a.a_id WHERE s.title <> '" + str(song_name) + "';"
-    results = con.execute(query)
-    for result in results:
-        return result
-    return None
+    return con.execute(query)
 
 def get_song_data(con, song_name):
     query = "SELECT s.title, s.year, s.release, s.song_hotttnesss, s.danceability, s.duration, " \
@@ -32,11 +79,13 @@ def get_song_data(con, song_name):
         return result
     return None
 
-def print_similar_songs(con, song_name):
+def print_similar_songs(con, song_name, number_of_songs):
     song_data = get_song_data(con, song_name)
     songs_data = get_all_other_songs_data(con, song_name)
     similar_artists = get_similar_artists(con, song_data[21])
-    #tutaj dorobic reszte procedury ktora ma wypisac n najblizszych wynikow
+    similar_songs = create_similar_songs_list(song_data, songs_data, similar_artists)
+    print "Similar songs to " + str(song_name) + ":"
+    print_most_similar_songs(similar_songs, number_of_songs)
 
 def print_albums_songs_count(con):
     query = "SELECT s.release, count(*) FROM Songs AS s GROUP BY s.release;"
@@ -65,9 +114,10 @@ def print_database_statistics(con):
 def main():
     con = sql.connect(db_file)
     con.text_factory = str
-    print_database_statistics(con)
+    #print_database_statistics(con)
 
     song_name = "The Deceived"
-    print_similar_songs(con, song_name)
+    number_of_songs = 20
+    print_similar_songs(con, song_name, number_of_songs)
 
 main()
