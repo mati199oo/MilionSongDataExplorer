@@ -1,7 +1,43 @@
 import sqlite3 as sql
+import matplotlib.pyplot as plt
+import numpy as np
 from difflib import SequenceMatcher
 
 db_file = "../resources/songs.db"
+
+def visualize(authors_in_clusters):
+    x = []
+    y = []
+    for author in authors_in_clusters:
+        x.append(author[0])
+        y.append(author[1])
+
+    y_pos = np.arange(len(x))
+    plt.bar(y_pos, y, align='center', alpha=1.0)
+    plt.xticks(y_pos, x)
+    plt.ylabel('Number of clusters')
+    plt.title('Number of clusters author is in')
+
+    plt.show()
+
+def find_authors_in_clusters(authors, clusters):
+    authors_in_clusters = []
+    for author in authors:
+        number_of_clusters = 0
+        for cluster in clusters:
+            is_in_cluster = False
+            for song in cluster:
+                if not is_in_cluster and song[1] == author:
+                    number_of_clusters += 1
+                    is_in_cluster = True
+        authors_in_clusters.append([author, number_of_clusters])
+    return authors_in_clusters
+
+def visualize_authors(clusters):
+    authors = ["Bullet For My Valentine", "Trivium", "Slipknot", "Britt Nicole", "Madonna", "Metallica",
+               "Jessica Simpson", "Britney Spears"]
+    authors_in_clusters = find_authors_in_clusters(authors, clusters)
+    visualize(authors_in_clusters)
 
 def print_all_clusters(clusters):
     print "Clusters: "
@@ -50,6 +86,7 @@ def cluster_songs(con):
         songs_data, cluster = create_cluster(cluster, songs_data, song, similar_artists)
         clusters.append(cluster)
     print_all_clusters(clusters)
+    return clusters
 
 def similar(a, b):
     return SequenceMatcher(None, a, b).ratio()
@@ -162,12 +199,13 @@ def print_database_statistics(con):
 def main():
     con = sql.connect(db_file)
     con.text_factory = str
-    # print_database_statistics(con)
+    print_database_statistics(con)
 
-    # song_name = "The Deceived"
-    # number_of_songs = 20
-    # print_similar_songs(con, song_name, number_of_songs)
+    song_name = "The Deceived"
+    number_of_songs = 20
+    print_similar_songs(con, song_name, number_of_songs)
 
-    cluster_songs(con)
+    clusters = cluster_songs(con)
+    visualize_authors(clusters)
 
 main()
