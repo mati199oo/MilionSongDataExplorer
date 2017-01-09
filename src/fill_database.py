@@ -4,7 +4,7 @@ import sqlite3 as sql
 import numpy as np
 import pickle as pic
 
-base_dir = "../../../MillionSongSubset/data/"
+base_dir = "../../MillionSongSubset/data/"
 db_file = "../resources/songs.db"
 
 properties = [method.replace("get_", "") for method in dir(h5) if method.startswith("get") and not method.startswith("get_num")]
