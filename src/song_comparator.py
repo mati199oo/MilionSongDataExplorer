@@ -53,7 +53,7 @@ def create_cluster(cluster, songs, song, similar_artists):
     if songs:
         for index in xrange(0, len(songs)):
             similarity = calculate_similarity(song, songs[index], similar_artists)
-            if similarity > 5.0:
+            if similarity > 40.0:
                 song_list.append(songs[index])
             else:
                 cluster.append([songs[index][0], songs[index][14]])
